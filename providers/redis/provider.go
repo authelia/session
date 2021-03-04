@@ -58,10 +58,8 @@ func NewFailover(cfg FailoverConfig) (*Provider, error) {
 
 	db := redis.NewFailoverClient(&redis.FailoverOptions{
 		MasterName:         cfg.MasterName,
-		SentinelAddrs:      cfg.Addrs,
+		SentinelAddrs:      cfg.SentinelAddrs,
 		SentinelPassword:   cfg.SentinelPassword,
-		RouteByLatency:     cfg.RouteByLatency,
-		RouteRandomly:      cfg.RouteRandomly,
 		SlaveOnly:          cfg.SlaveOnly,
 		Username:           cfg.Username,
 		Password:           cfg.Password,
@@ -93,17 +91,21 @@ func NewFailover(cfg FailoverConfig) (*Provider, error) {
 	return p, nil
 }
 
-// NewFailover returns a new configured redis cluster provider
-func NewCluster(cfg ClusterConfig) (*Provider, error) {
-	db := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:              cfg.Addrs,
-		Username:           cfg.Username,
-		Password:           cfg.Password,
-		NewClient:          cfg.NewClient,
-		ClusterSlots:       cfg.ClusterSlots,
+func NewFailoverCluster(cfg FailoverConfig) (*Provider, error) {
+	if cfg.MasterName == "" {
+		return nil, errConfigMasterNameEmpty
+	}
+
+	db := redis.NewFailoverClusterClient(&redis.FailoverOptions{
+		MasterName:         cfg.MasterName,
+		SentinelAddrs:      cfg.SentinelAddrs,
+		SentinelPassword:   cfg.SentinelPassword,
 		RouteByLatency:     cfg.RouteByLatency,
 		RouteRandomly:      cfg.RouteRandomly,
-		MaxRedirects:       cfg.MaxRedirects,
+		SlaveOnly:          cfg.SlaveOnly,
+		Username:           cfg.Username,
+		Password:           cfg.Password,
+		DB:                 cfg.DB,
 		MaxRetries:         cfg.MaxRetries,
 		MinRetryBackoff:    cfg.MinRetryBackoff,
 		MaxRetryBackoff:    cfg.MaxRetryBackoff,
