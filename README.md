@@ -7,17 +7,10 @@
 
 Session implementation for [fasthttp](https://github.com/valyala/fasthttp).
 
-See [examples](_examples/) to see how to use it.
-
 ## Providers
 
-- memcache
 - memory
-- mongodb
-- mysql
-- postgres
 - redis
-- sqlite3
 
 ## Features
 
