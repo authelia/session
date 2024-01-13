@@ -8,8 +8,8 @@ import (
 func Test_NewStore(t *testing.T) {
 	store := NewStore()
 
-	if store.data == nil {
-		t.Error("Store.data is nil")
+	if store == nil {
+		t.Error("Store is nil")
 	}
 }
 
@@ -62,7 +62,7 @@ func TestStore_GetSetDeleteBytes(t *testing.T) {
 func TestStore_Ptr(t *testing.T) {
 	store := NewStore()
 
-	if store.Ptr() != store.data {
+	if store.Ptr() != &store.data {
 		t.Errorf("Store.Ptr() ==  %p, want %p", store.Ptr(), store.data)
 	}
 }
@@ -75,7 +75,7 @@ func TestStore_Flush(t *testing.T) {
 
 	store.Flush()
 
-	if len(store.data.D) > 0 {
+	if len(store.data.KV) > 0 {
 		t.Error("Store is not flushed")
 	}
 }
@@ -97,7 +97,9 @@ func TestStore_SetGetHasExpiration(t *testing.T) {
 
 	expiration := 10 * time.Second
 
-	store.SetExpiration(expiration)
+	if err := store.SetExpiration(expiration); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 
 	if v := store.GetExpiration(); v != expiration {
 		t.Errorf("Store.GetExpiration() == %d, want %d", v, expiration)
@@ -116,7 +118,7 @@ func TestStore_Reset(t *testing.T) {
 
 	store.Reset()
 
-	if len(store.data.D) > 0 || len(store.sessionID) > 0 || store.defaultExpiration != 0 {
+	if len(store.data.KV) > 0 || len(store.sessionID) > 0 || store.defaultExpiration != 0 {
 		t.Error("Store is not reseted")
 	}
 }

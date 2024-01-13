@@ -92,8 +92,8 @@ func Test_New(t *testing.T) {
 		t.Error("Session.cookie is nil")
 	}
 
-	if s.storePool == nil {
-		t.Error("Session.storePool is nil")
+	if v := s.storePool.Get().(*Store); v == nil {
+		t.Errorf("Session.storePool returns: %v", v)
 	}
 }
 
@@ -103,7 +103,10 @@ func TestSession_SetProvider(t *testing.T) {
 	})
 	provider := &mockProvider{needGCValue: true}
 
-	s.SetProvider(provider)
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	time.Sleep(s.config.GCLifetime + 100*time.Millisecond)
 	s.stopGC()
 
@@ -251,8 +254,8 @@ func TestSession_GetErrNotProvider(t *testing.T) {
 
 	store, err := s.Get(ctx)
 
-	if err != errNotSetProvider {
-		t.Errorf("Expected error: %v", errNotSetProvider)
+	if err != ErrNotSetProvider {
+		t.Errorf("Expected error: %v", ErrNotSetProvider)
 	}
 
 	if store != nil {
@@ -266,14 +269,16 @@ func TestSession_GetErrEmptySessionID(t *testing.T) {
 			return []byte("")
 		},
 	})
-	s.SetProvider(new(mockProvider))
+
+	if err := s.SetProvider(new(mockProvider)); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 
 	store, err := s.Get(ctx)
-
-	if err != errEmptySessionID {
-		t.Errorf("Expected error: %v", errEmptySessionID)
+	if err != ErrEmptySessionID {
+		t.Errorf("Expected error: %v", ErrEmptySessionID)
 	}
 
 	if store != nil {
@@ -284,13 +289,15 @@ func TestSession_GetErrEmptySessionID(t *testing.T) {
 func TestSession_GetProviderError(t *testing.T) {
 	s := New(Config{})
 	provider := &mockProvider{errGet: errors.New("error from provider")}
-	s.SetProvider(provider)
+
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 	ctx.Request.Header.SetCookie(s.config.CookieName, "aiasdiasd")
 
 	store, err := s.Get(ctx)
-
 	if err != provider.errGet {
 		t.Errorf("Expected error: %v", provider.errGet)
 	}
@@ -304,18 +311,20 @@ func TestSession_Get(t *testing.T) {
 	s := New(Config{})
 
 	provider := new(mockProvider)
-	s.SetProvider(provider)
+
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 
 	store, err := s.Get(ctx)
-
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
 	if store == nil {
-		t.Error("The store is nil")
+		t.Fatal("store is nil")
 	}
 
 	if len(store.sessionID) == 0 {
@@ -330,14 +339,15 @@ func TestSession_Get(t *testing.T) {
 func TestSession_SaveProviderError(t *testing.T) {
 	s := New(Config{})
 	provider := &mockProvider{errSave: errors.New("error from provider")}
-	s.SetProvider(provider)
+
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 	store := NewStore()
 
-	err := s.Save(ctx, store)
-
-	if err != provider.errSave {
+	if err := s.Save(ctx, store); err != provider.errSave {
 		t.Errorf("Expected error: %v", provider.errGet)
 	}
 }
@@ -345,7 +355,10 @@ func TestSession_SaveProviderError(t *testing.T) {
 func TestSession_Save(t *testing.T) {
 	s := New(Config{})
 	provider := new(mockProvider)
-	s.SetProvider(provider)
+
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 
@@ -371,8 +384,8 @@ func TestSession_RegenerateErrNotProvider(t *testing.T) {
 	s := New(Config{})
 	ctx := new(fasthttp.RequestCtx)
 
-	if err := s.Regenerate(ctx); err != errNotSetProvider {
-		t.Errorf("Expected error: %v", errNotSetProvider)
+	if err := s.Regenerate(ctx); err != ErrNotSetProvider {
+		t.Errorf("Expected error: %v", ErrNotSetProvider)
 	}
 }
 
@@ -382,20 +395,26 @@ func TestSession_RegenerateErrEmptySessionID(t *testing.T) {
 			return []byte("")
 		},
 	})
-	s.SetProvider(new(mockProvider))
+
+	if err := s.SetProvider(new(mockProvider)); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 	ctx.Request.Header.SetCookie(s.config.CookieName, "d32r2f2ecev")
 
-	if err := s.Regenerate(ctx); err != errEmptySessionID {
-		t.Errorf("Expected error: %v", errEmptySessionID)
+	if err := s.Regenerate(ctx); err != ErrEmptySessionID {
+		t.Errorf("Expected error: %v", ErrEmptySessionID)
 	}
 }
 
 func TestSession_RegenerateProviderError(t *testing.T) {
 	s := New(Config{})
 	provider := &mockProvider{errRegenerate: errors.New("error from provider")}
-	s.SetProvider(provider)
+
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 	ctx.Request.Header.SetCookie(s.config.CookieName, "d32r2f2ecev")
@@ -408,7 +427,10 @@ func TestSession_RegenerateProviderError(t *testing.T) {
 func TestSession_Regenerate(t *testing.T) {
 	s := New(Config{})
 	provider := &mockProvider{}
-	s.SetProvider(provider)
+
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	id := "d32r2f2ecev"
 	ctx := new(fasthttp.RequestCtx)
@@ -427,23 +449,22 @@ func TestSession_DestroyErrNotProvider(t *testing.T) {
 	s := New(Config{})
 	ctx := new(fasthttp.RequestCtx)
 
-	err := s.Destroy(ctx)
-
-	if err != errNotSetProvider {
-		t.Errorf("Expected error: %v", errNotSetProvider)
+	if err := s.Destroy(ctx); err != ErrNotSetProvider {
+		t.Errorf("Expected error: %v", ErrNotSetProvider)
 	}
 }
 
 func TestSession_DestroyIDNotExist(t *testing.T) {
 	s := New(Config{})
 	provider := new(mockProvider)
-	s.SetProvider(provider)
+
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 
-	err := s.Destroy(ctx)
-
-	if err != nil {
+	if err := s.Destroy(ctx); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -451,14 +472,15 @@ func TestSession_DestroyIDNotExist(t *testing.T) {
 func TestSession_DestroyProviderError(t *testing.T) {
 	s := New(Config{})
 	provider := &mockProvider{errDestroy: errors.New("error from provider")}
-	s.SetProvider(provider)
+
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 	ctx.Request.Header.SetCookie(s.config.CookieName, "asd2324n")
 
-	err := s.Destroy(ctx)
-
-	if err != provider.errDestroy {
+	if err := s.Destroy(ctx); err != provider.errDestroy {
 		t.Errorf("Expected error: %v", provider.errDestroy)
 	}
 }
@@ -466,14 +488,15 @@ func TestSession_DestroyProviderError(t *testing.T) {
 func TestSession_Destroy(t *testing.T) {
 	s := New(Config{})
 	provider := new(mockProvider)
-	s.SetProvider(provider)
+
+	if err := s.SetProvider(provider); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	ctx := new(fasthttp.RequestCtx)
 	ctx.Request.Header.SetCookie(s.config.CookieName, "asd2324n")
 
-	err := s.Destroy(ctx)
-
-	if err != nil {
+	if err := s.Destroy(ctx); err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }

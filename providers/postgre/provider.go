@@ -3,7 +3,7 @@ package postgre
 import (
 	"fmt"
 
-	"github.com/authelia/session/v2/internal/sql"
+	"github.com/fasthttp/session/v2/internal/sql"
 
 	// Import postgres driver
 	_ "github.com/lib/pq"
@@ -26,10 +26,10 @@ var (
 // New returns a new configured postgres provider
 func New(cfg Config) (*Provider, error) {
 	if cfg.Host == "" {
-		return nil, errConfigHostEmpty
+		return nil, ErrConfigHostEmpty
 	}
 	if cfg.Port == 0 {
-		return nil, errConfigPortZero
+		return nil, ErrConfigPortZero
 	}
 
 	providerCfg := sql.ProviderConfig{

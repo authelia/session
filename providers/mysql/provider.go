@@ -3,7 +3,7 @@ package mysql
 import (
 	"fmt"
 
-	"github.com/authelia/session/v2/internal/sql"
+	"github.com/fasthttp/session/v2/internal/sql"
 
 	// Import mysql driver
 	_ "github.com/go-sql-driver/mysql"
@@ -27,10 +27,10 @@ var (
 // New returns a new configured mysql provider
 func New(cfg Config) (*Provider, error) {
 	if cfg.Host == "" {
-		return nil, errConfigHostEmpty
+		return nil, ErrConfigHostEmpty
 	}
 	if cfg.Port == 0 {
-		return nil, errConfigPortZero
+		return nil, ErrConfigPortZero
 	}
 
 	providerCfg := sql.ProviderConfig{

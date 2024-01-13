@@ -1,44 +1,38 @@
 package session
 
 import (
-	"bytes"
+	"reflect"
 	"testing"
 )
 
-func getSRC() *Dict {
-	src := new(Dict)
+func getSRC() Dict {
+	src := newDictValue()
 
-	src.Set("k1", 1)
-	src.Set("k2", 2)
+	src.KV["k1"] = "1"
+	src.KV["k2"] = "2"
 
 	return src
 }
 
-func getDST() *Dict {
-	return new(Dict)
+func getDST() Dict {
+	return newDictValue()
 }
 
 func TestMSGPEncodeDecode(t *testing.T) {
 	src := getSRC()
 	dst := getDST()
 
-	b1, err := MSGPEncode(*src)
+	b1, err := MSGPEncode(src)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = MSGPDecode(dst, b1)
-	if err != nil {
+	if err := MSGPDecode(&dst, b1); err != nil {
 		t.Fatal(err)
 	}
 
-	b2, err := MSGPEncode(*dst)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !bytes.Equal(b1, b2) {
-		t.Errorf("The bytes results of 'src' and 'dst' must be equals, src = %s; dst = %s", b1, b2)
+	if !reflect.DeepEqual(src, dst) {
+		t.Errorf("The results of 'src' and 'dst' must be equals, src = %v; dst = %v", src, dst)
 	}
 }
 
@@ -46,23 +40,17 @@ func TestBase64EncodeDecode(t *testing.T) {
 	src := getSRC()
 	dst := getDST()
 
-	b1, err := Base64Encode(*src)
+	b1, err := Base64Encode(src)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = Base64Decode(dst, b1)
-	if err != nil {
+	if err := Base64Decode(&dst, b1); err != nil {
 		t.Fatal(err)
 	}
 
-	b2, err := Base64Encode(*dst)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !bytes.Equal(b1, b2) {
-		t.Errorf("The bytes results of 'src' and 'dst' must be equals, src = %s; dst = %s", b1, b2)
+	if !reflect.DeepEqual(src, dst) {
+		t.Errorf("The results of 'src' and 'dst' must be equals, src = %v; dst = %v", src, dst)
 	}
 }
 
@@ -70,8 +58,11 @@ func BenchmarkMSGPEncode(b *testing.B) {
 	src := getSRC()
 
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		MSGPEncode(*src)
+		if _, err := MSGPEncode(src); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -79,11 +70,14 @@ func BenchmarkMSGPDecode(b *testing.B) {
 	src := getSRC()
 	dst := getDST()
 
-	srcBytes, _ := MSGPEncode(*src)
+	srcBytes, _ := MSGPEncode(src)
 
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		MSGPDecode(dst, srcBytes)
+		if err := MSGPDecode(&dst, srcBytes); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -91,8 +85,11 @@ func BenchmarkBase64Encode(b *testing.B) {
 	src := getSRC()
 
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		Base64Encode(*src)
+		if _, err := Base64Encode(src); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -100,10 +97,13 @@ func BenchmarkBase64Decode(b *testing.B) {
 	src := getSRC()
 	dst := getDST()
 
-	srcBytes, _ := Base64Encode(*src)
+	srcBytes, _ := Base64Encode(src)
 
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		Base64Decode(dst, srcBytes)
+		if err := Base64Decode(&dst, srcBytes); err != nil {
+			b.Fatal(err)
+		}
 	}
 }

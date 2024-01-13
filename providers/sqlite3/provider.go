@@ -3,7 +3,7 @@ package sqlite3
 import (
 	"fmt"
 
-	"github.com/authelia/session/v2/internal/sql"
+	"github.com/fasthttp/session/v2/internal/sql"
 
 	// Import sqlite3 driver
 	_ "github.com/mattn/go-sqlite3"
@@ -26,7 +26,7 @@ var (
 // New returns a new configured sqlite3 provider
 func New(cfg Config) (*Provider, error) {
 	if cfg.DBPath == "" {
-		return nil, errConfigDBPathEmpty
+		return nil, ErrConfigDBPathEmpty
 	}
 
 	providerCfg := sql.ProviderConfig{

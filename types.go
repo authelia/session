@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/savsgio/dictpool"
 	"github.com/valyala/fasthttp"
 )
 
@@ -72,19 +71,14 @@ type Session struct {
 	cookie   *cookie
 	log      Logger
 
-	storePool  *sync.Pool
+	storePool  sync.Pool
 	stopGCChan chan struct{}
-}
-
-// Dict memory store
-type Dict struct {
-	dictpool.Dict
 }
 
 // Store represents the user session
 type Store struct {
 	sessionID         []byte
-	data              *Dict
+	data              Dict
 	defaultExpiration time.Duration
 	lock              sync.RWMutex
 }
