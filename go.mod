@@ -1,4 +1,4 @@
-module github.com/fasthttp/session/v2
+module authelia.com/lib/session/v3
 
 go 1.21
 
