@@ -1,19 +1,19 @@
 module github.com/fasthttp/session/v2
 
-go 1.19
+go 1.21
 
 require (
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/lib/pq v1.10.9
-	github.com/mattn/go-sqlite3 v1.14.18
-	github.com/redis/go-redis/v9 v9.3.0
+	github.com/mattn/go-sqlite3 v1.14.19
+	github.com/redis/go-redis/v9 v9.4.0
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee
 	github.com/tinylib/msgp v1.1.9
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.51.0
-	go.mongodb.org/mongo-driver v1.13.0
+	go.mongodb.org/mongo-driver v1.13.1
 )
 
 require (
