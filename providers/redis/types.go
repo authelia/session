@@ -1,11 +1,9 @@
-//go:build go1.19
-// +build go1.19
-
 package redis
 
 import (
 	"context"
 	"crypto/tls"
+	"net"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -26,12 +24,23 @@ type Config struct {
 	// host:port address.
 	Addr string
 
+	// ClientName is the name of the client. Each connection will run the CLIENT SETNAME cmd.
+	ClientName string
+
+	Dialer func(ctx context.Context, network string, addr string) (conn net.Conn, err error)
+
+	OnConnect func(ctx context.Context, cn *redis.Conn) (err error)
+
+	Protocol int
+
 	// Optional username.
 	Username string
 
 	// Optional password. Must match the password specified in the
 	// requirepass server configuration option.
 	Password string
+
+	CredentialsProvider func() (username string, password string)
 
 	// Database to be selected after connecting to the server.
 	DB int
@@ -62,9 +71,18 @@ type Config struct {
 	// Default is ReadTimeout.
 	WriteTimeout time.Duration
 
+	ContextTimeoutEnabled bool
+
+	PoolFIFO bool
+
 	// Maximum number of socket connections.
 	// Default is 10 connections per every CPU as reported by runtime.NumCPU.
 	PoolSize int
+
+	// Amount of time client waits for connection if all connections
+	// are busy before returning an error.
+	// Default is ReadTimeout + 1 second.
+	PoolTimeout time.Duration
 
 	// Minimum number of idle connections which is useful when establishing
 	// new connection is slow.
@@ -73,25 +91,7 @@ type Config struct {
 	// Maximum number of idle connections.
 	MaxIdleConns int
 
-	// Deprecated: This field has been renamed to ConnMaxLifetime
-	MaxConnAge time.Duration
-
-	// Maximum amount of time a connection may be reused.
-	// Expired connections may be closed lazily before reuse.
-	// If <= 0, connections are not closed due to a connection's age.
-	// Default is to not close idle connections.
-	ConnMaxLifetime time.Duration
-
-	// Amount of time client waits for connection if all connections
-	// are busy before returning an error.
-	// Default is ReadTimeout + 1 second.
-	PoolTimeout time.Duration
-
-	// Deprecated: This field has been renamed to ConnMaxIdleTime
-	IdleTimeout time.Duration
-
-	// Deprecated: This field has been removed in favor of MaxIdleConns
-	IdleCheckFrequency time.Duration
+	MaxActiveConns int
 
 	// Maximum amount of time a connection may be idle.
 	// Should be less than server's timeout.
@@ -100,15 +100,25 @@ type Config struct {
 	// Default is 30 minutes. -1 disables idle timeout check.
 	ConnMaxIdleTime time.Duration
 
+	// Maximum amount of time a connection may be reused.
+	// Expired connections may be closed lazily before reuse.
+	// If <= 0, connections are not closed due to a connection's age.
+	// Default is to not close idle connections.
+	ConnMaxLifetime time.Duration
+
 	// TLS Config to use. When set TLS will be negotiated.
 	TLSConfig *tls.Config
 
 	// Limiter interface used to implemented circuit breaker or rate limiter.
 	Limiter redis.Limiter
+
+	DisableIdentity bool
+
+	IdentitySuffix string
 }
 
-// FailoverConfig provider settings.
-type FailoverConfig struct {
+// ConfigSentinel provider settings.
+type ConfigSentinel struct {
 	// Key prefix
 	KeyPrefix string
 
@@ -131,6 +141,8 @@ type FailoverConfig struct {
 	// The sentinel nodes seed list (host:port).
 	SentinelAddrs []string
 
+	ClientName string
+
 	// The username to use for the sentinel connection if required. If specified, the Redis
 	// client will attempt to authenticate via ACL authentication. If not specified, the
 	// client will use requirepass-style authentication.
@@ -139,10 +151,10 @@ type FailoverConfig struct {
 	// The password for the sentinel connection if required (different to username/password).
 	SentinelPassword string
 
-	// Routes read-only commands to the closest node. Only relevant with NewFailoverCluster.
+	// Routes read-only commands to the closest node. Only relevant with NewCluster.
 	RouteByLatency bool
 
-	// Routes read-only commands in random order. Only relevant with NewFailoverCluster.
+	// Routes read-only commands in random order. Only relevant with NewCluster.
 	RouteRandomly bool
 
 	// Deprecated: This field has been renamed to ReplicaOnly
@@ -150,6 +162,8 @@ type FailoverConfig struct {
 
 	// Route all commands to replica read-only nodes.
 	ReplicaOnly bool
+
+	UseDisconnectedReplicas bool
 
 	// Maximum number of retries before giving up.
 	// Default is to not retry failed commands.
@@ -188,9 +202,6 @@ type FailoverConfig struct {
 	// Maximum number of idle connections.
 	MaxIdleConns int
 
-	// Deprecated: This field has been renamed to ConnMaxLifetime
-	MaxConnAge time.Duration
-
 	// Maximum amount of time a connection may be reused.
 	// Expired connections may be closed lazily before reuse.
 	// If <= 0, connections are not closed due to a connection's age.
@@ -201,9 +212,6 @@ type FailoverConfig struct {
 	// are busy before returning an error.
 	// Default is ReadTimeout + 1 second.
 	PoolTimeout time.Duration
-
-	// Deprecated: This field has been renamed to ConnMaxIdleTime
-	IdleTimeout time.Duration
 
 	// Maximum amount of time a connection may be idle.
 	// Should be less than server's timeout.

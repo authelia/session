@@ -2,16 +2,19 @@ package session
 
 import "time"
 
-const defaultSessionKeyName = "sessionid"
-const defaultDomain = ""
-const defaultExpiration = 2 * time.Hour
-const defaultGCLifetime = 1 * time.Minute
-const defaultSecure = true
-const defaultSessionIDInURLQuery = false
-const defaultSessionIDInHTTPHeader = false
-const defaultCookieLen uint32 = 32
+const (
+	defaultSessionKeyName               = "sessionid"
+	defaultDomain                       = ""
+	defaultExpiration                   = 2 * time.Hour
+	defaultGCLifetime                   = 1 * time.Minute
+	defaultSecure                       = true
+	defaultSessionIDInURLQuery          = false
+	defaultSessionIDInHTTPHeader        = false
+	defaultCookieLen             uint32 = 32
 
-// If set the cookie expiration when the browser is closed (-1), set the expiration as a keep alive (2 days)
-// so as not to keep dead sessions for a long time
-const keepAliveExpiration = 2 * 24 * time.Hour
-const expirationAttrKey = "__store:expiration__"
+	expirationAttrKey = "__store:expiration__"
+
+	// If set the cookie expiration when the browser is closed (-1), set the expiration as a keep alive (2 days)
+	// so as not to keep dead sessions for a long time
+	keepAliveExpiration = 2 * 24 * time.Hour
+)

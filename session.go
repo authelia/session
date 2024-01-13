@@ -71,21 +71,21 @@ func New(cfg Config) *Session {
 func (s *Session) SetProvider(provider Provider) error {
 	s.provider = provider
 
-	if s.provider.NeedGC() {
-		go s.startGC()
+	if gcprovider, ok := s.provider.(GarbageCollectedProvider); ok {
+		go s.startGC(gcprovider)
 	}
 
 	return nil
 }
 
-func (s *Session) startGC() {
+func (s *Session) startGC(provider GarbageCollectedProvider) {
 	ticker := time.NewTicker(s.config.GCLifetime)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			err := s.provider.GC()
+			err := provider.GC()
 			if err != nil {
 				s.log.Printf("session GC crash: %v", err)
 			}
@@ -169,7 +169,7 @@ func (s *Session) Get(ctx *fasthttp.RequestCtx) (*Store, error) {
 	store.defaultExpiration = s.config.Expiration
 
 	if !newUser {
-		data, err := s.provider.Get(id)
+		data, err := s.provider.Get(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +204,7 @@ func (s *Session) Save(ctx *fasthttp.RequestCtx, store *Store) error {
 		return err
 	}
 
-	if err := s.provider.Save(id, data, providerExpiration); err != nil {
+	if err := s.provider.Save(ctx, id, data, providerExpiration); err != nil {
 		return err
 	}
 
@@ -235,7 +235,7 @@ func (s *Session) Regenerate(ctx *fasthttp.RequestCtx) error {
 		providerExpiration = keepAliveExpiration
 	}
 
-	if err := s.provider.Regenerate(id, newID, providerExpiration); err != nil {
+	if err := s.provider.Regenerate(ctx, id, newID, providerExpiration); err != nil {
 		return err
 	}
 
@@ -255,7 +255,7 @@ func (s *Session) Destroy(ctx *fasthttp.RequestCtx) error {
 		return nil
 	}
 
-	err := s.provider.Destroy(sessionID)
+	err := s.provider.Destroy(ctx, sessionID)
 	if err != nil {
 		return err
 	}

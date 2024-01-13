@@ -1,31 +1,13 @@
 package memory
 
 import (
-	"sync"
+	"context"
 	"time"
 
 	"github.com/savsgio/gotils/strconv"
 )
 
-var itemPool = &sync.Pool{
-	New: func() interface{} {
-		return new(item)
-	},
-}
-
-func acquireItem() *item {
-	return itemPool.Get().(*item)
-}
-
-func releaseItem(item *item) {
-	item.data = item.data[:0]
-	item.lastActiveTime = 0
-	item.expiration = 0
-
-	itemPool.Put(item)
-}
-
-// New returns a new memory provider configured
+// New returns a new memory provider configured.
 func New(cfg Config) (*Provider, error) {
 	p := &Provider{
 		config: cfg,
@@ -34,13 +16,9 @@ func New(cfg Config) (*Provider, error) {
 	return p, nil
 }
 
-func (p *Provider) getSessionKey(sessionID []byte) string {
-	return strconv.B2S(sessionID)
-}
-
-// Get returns the data of the given session id
-func (p *Provider) Get(id []byte) ([]byte, error) {
-	key := p.getSessionKey(id)
+// Get returns the data of the given session id.
+func (p *Provider) Get(ctx context.Context, id []byte) ([]byte, error) {
+	key := p.getKey(id)
 
 	val, found := p.db.Load(key)
 	if !found || val == nil { // Not exist
@@ -52,9 +30,9 @@ func (p *Provider) Get(id []byte) ([]byte, error) {
 	return item.data, nil
 }
 
-// Save saves the session data and expiration from the given session id
-func (p *Provider) Save(id, data []byte, expiration time.Duration) error {
-	key := p.getSessionKey(id)
+// Save saves the session data and expiration from the given session id.
+func (p *Provider) Save(ctx context.Context, id, data []byte, expiration time.Duration) error {
+	key := p.getKey(id)
 
 	item := acquireItem()
 	item.data = data
@@ -66,23 +44,11 @@ func (p *Provider) Save(id, data []byte, expiration time.Duration) error {
 	return nil
 }
 
-// Regenerate updates the session id and expiration with the new session id
-// of the the given current session id
-func (p *Provider) Regenerate(id, newID []byte, expiration time.Duration) error {
-	key := p.getSessionKey(id)
+// Destroy destroys the session from the given id.
+func (p *Provider) Destroy(ctx context.Context, id []byte) error {
+	key := p.getKey(id)
 
-	data, found := p.db.LoadAndDelete(key)
-	if found && data != nil {
-		item := data.(*item)
-		item.lastActiveTime = time.Now().UnixNano()
-		item.expiration = expiration
-
-		newKey := p.getSessionKey(newID)
-
-		p.db.Store(newKey, item)
-	}
-
-	return nil
+	return p.destroy(key)
 }
 
 func (p *Provider) destroy(key string) error {
@@ -96,15 +62,27 @@ func (p *Provider) destroy(key string) error {
 	return nil
 }
 
-// Destroy destroys the session from the given id
-func (p *Provider) Destroy(id []byte) error {
-	key := p.getSessionKey(id)
+// Regenerate updates the session id and expiration with the new session id
+// of the given current session id.
+func (p *Provider) Regenerate(ctx context.Context, id, newID []byte, expiration time.Duration) error {
+	key := p.getKey(id)
 
-	return p.destroy(key)
+	data, found := p.db.LoadAndDelete(key)
+	if found && data != nil {
+		item := data.(*item)
+		item.lastActiveTime = time.Now().UnixNano()
+		item.expiration = expiration
+
+		newKey := p.getKey(newID)
+
+		p.db.Store(newKey, item)
+	}
+
+	return nil
 }
 
-// Count returns the total of stored sessions
-func (p *Provider) Count() (count int) {
+// Count returns the total of stored sessions.
+func (p *Provider) Count(ctx context.Context) (count int) {
 	p.db.Range(func(_, _ interface{}) bool {
 		count++
 
@@ -114,13 +92,8 @@ func (p *Provider) Count() (count int) {
 	return count
 }
 
-// NeedGC indicates if the GC needs to be run
-func (p *Provider) NeedGC() bool {
-	return true
-}
-
-// GC destroys the expired sessions
-func (p *Provider) GC() error {
+// GC destroys the expired sessions.
+func (p *Provider) GC(ctx context.Context) error {
 	now := time.Now().UnixNano()
 
 	p.db.Range(func(key, value interface{}) bool {
@@ -138,4 +111,8 @@ func (p *Provider) GC() error {
 	})
 
 	return nil
+}
+
+func (p *Provider) getKey(sessionID []byte) string {
+	return strconv.B2S(sessionID)
 }

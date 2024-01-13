@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -92,11 +93,15 @@ type Logger interface {
 
 // Provider interface implemented by providers
 type Provider interface {
-	Get(id []byte) ([]byte, error)
-	Save(id, data []byte, expiration time.Duration) error
-	Destroy(id []byte) error
-	Regenerate(id, newID []byte, expiration time.Duration) error
-	Count() int
-	NeedGC() bool
-	GC() error
+	Get(ctx context.Context, id []byte) (data []byte, err error)
+	Save(ctx context.Context, id, data []byte, expiration time.Duration) (err error)
+	Destroy(ctx context.Context, id []byte) (err error)
+	Regenerate(ctx context.Context, id, newID []byte, expiration time.Duration) (err error)
+	Count(ctx context.Context) (count int)
+}
+
+type GarbageCollectedProvider interface {
+	Provider
+
+	GC() (err error)
 }

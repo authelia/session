@@ -5,6 +5,6 @@ import (
 )
 
 var (
-	ErrNotSetProvider = errors.New("Not setted a session provider")
-	ErrEmptySessionID = errors.New("Empty session id")
+	ErrNotSetProvider = errors.New("session: provider not set or configured")
+	ErrEmptySessionID = errors.New("empty session id")
 )

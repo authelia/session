@@ -2,6 +2,7 @@ package session
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -19,32 +20,27 @@ type mockProvider struct {
 	errRegenerate error
 	errGC         error
 	countValue    int
-	needGCValue   bool
 	gcExecuted    bool
 }
 
-func (p *mockProvider) Get(id []byte) ([]byte, error) {
+func (p *mockProvider) Get(ctx context.Context, id []byte) ([]byte, error) {
 	return nil, p.errGet
 }
 
-func (p *mockProvider) Save(id, data []byte, expiration time.Duration) error {
+func (p *mockProvider) Save(ctx context.Context, id, data []byte, expiration time.Duration) error {
 	return p.errSave
 }
 
-func (p *mockProvider) Destroy(id []byte) error {
+func (p *mockProvider) Destroy(ctx context.Context, id []byte) error {
 	return p.errDestroy
 }
 
-func (p *mockProvider) Regenerate(id, newID []byte, expiration time.Duration) error {
+func (p *mockProvider) Regenerate(ctx context.Context, id, newID []byte, expiration time.Duration) error {
 	return p.errRegenerate
 }
 
-func (p *mockProvider) Count() int {
+func (p *mockProvider) Count(ctx context.Context) int {
 	return p.countValue
-}
-
-func (p *mockProvider) NeedGC() bool {
-	return p.needGCValue
 }
 
 func (p *mockProvider) GC() error {
@@ -101,7 +97,7 @@ func TestSession_SetProvider(t *testing.T) {
 	s := New(Config{
 		GCLifetime: 500 * time.Millisecond,
 	})
-	provider := &mockProvider{needGCValue: true}
+	provider := &mockProvider{}
 
 	if err := s.SetProvider(provider); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -128,12 +124,11 @@ func TestSession_startGC(t *testing.T) {
 		Logger:     logger,
 	})
 	provider := &mockProvider{
-		needGCValue: true,
-		errGC:       errors.New("mock error"),
+		errGC: errors.New("mock error"),
 	}
 	s.provider = provider
 
-	go s.startGC()
+	go s.startGC(provider)
 	time.Sleep(s.config.GCLifetime + 100*time.Millisecond)
 
 	s.stopGC()
