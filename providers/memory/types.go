@@ -11,4 +11,5 @@ type Config struct{}
 type Provider struct {
 	config Config
 	db     sync.Map
+	lookup sync.Map
 }

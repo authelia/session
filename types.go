@@ -79,6 +79,7 @@ type Session struct {
 // Store represents the user session
 type Store struct {
 	sessionID         []byte
+	lookup            string
 	data              Dict
 	defaultExpiration time.Duration
 	lock              sync.RWMutex
@@ -93,10 +94,11 @@ type Logger interface {
 
 // Provider interface implemented by providers
 type Provider interface {
-	Get(ctx context.Context, id []byte) (data []byte, err error)
-	Save(ctx context.Context, id, data []byte, expiration time.Duration) (err error)
-	Destroy(ctx context.Context, id []byte) (err error)
-	Regenerate(ctx context.Context, id, newID []byte, expiration time.Duration) (err error)
+	Get(ctx context.Context, id string) (data []byte, err error)
+	Save(ctx context.Context, id, lookup string, data []byte, expiration time.Duration) (err error)
+	Lookup(ctx context.Context, lookup string) (ids []string, err error)
+	Destroy(ctx context.Context, id string) (err error)
+	Regenerate(ctx context.Context, id, newID string, expiration time.Duration) (err error)
 	Count(ctx context.Context) (count int)
 }
 

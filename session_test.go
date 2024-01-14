@@ -23,19 +23,23 @@ type mockProvider struct {
 	gcExecuted    bool
 }
 
-func (p *mockProvider) Get(ctx context.Context, id []byte) ([]byte, error) {
+func (p *mockProvider) Get(ctx context.Context, id string) ([]byte, error) {
 	return nil, p.errGet
 }
 
-func (p *mockProvider) Save(ctx context.Context, id, data []byte, expiration time.Duration) error {
+func (p *mockProvider) Save(ctx context.Context, id, lookup string, data []byte, expiration time.Duration) error {
 	return p.errSave
 }
 
-func (p *mockProvider) Destroy(ctx context.Context, id []byte) error {
+func (p *mockProvider) Lookup(ctx context.Context, lookup string) (ids []string, err error) {
+	return nil, nil
+}
+
+func (p *mockProvider) Destroy(ctx context.Context, id string) error {
 	return p.errDestroy
 }
 
-func (p *mockProvider) Regenerate(ctx context.Context, id, newID []byte, expiration time.Duration) error {
+func (p *mockProvider) Regenerate(ctx context.Context, id, newID string, expiration time.Duration) error {
 	return p.errRegenerate
 }
 

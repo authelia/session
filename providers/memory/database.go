@@ -5,23 +5,24 @@ import (
 	"time"
 )
 
-type item struct {
+type databaseItem struct {
 	data           []byte
+	lookup         string
 	lastActiveTime int64
 	expiration     time.Duration
 }
 
 var itemPool = &sync.Pool{
 	New: func() interface{} {
-		return new(item)
+		return new(databaseItem)
 	},
 }
 
-func acquireItem() *item {
-	return itemPool.Get().(*item)
+func acquireDatabaseItem() *databaseItem {
+	return itemPool.Get().(*databaseItem)
 }
 
-func releaseItem(item *item) {
+func releaseDatabaseItem(item *databaseItem) {
 	item.data = item.data[:0]
 	item.lastActiveTime = 0
 	item.expiration = 0

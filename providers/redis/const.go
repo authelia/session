@@ -5,6 +5,9 @@ var (
 )
 
 const (
-	keySep      = ":"
-	keyWildcard = "*"
+	keySep         = ":"
+	keySepSession  = keySep + "session" + keySep
+	keySepLookup   = keySep + "lookup" + keySep
+	keyWildcard    = "*"
+	keySepWildcard = ":" + keyWildcard
 )

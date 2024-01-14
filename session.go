@@ -1,6 +1,7 @@
 package session
 
 import (
+	"github.com/savsgio/gotils/strconv"
 	"log"
 	"os"
 	"sync"
@@ -13,49 +14,49 @@ var (
 	defaultLogger Logger = log.New(os.Stderr, "", log.LstdFlags)
 )
 
-// New returns a configured manager
-func New(cfg Config) *Session {
-	cfg.cookieLen = defaultCookieLen
+// New returns a configured manager.
+func New(config Config) *Session {
+	config.cookieLen = defaultCookieLen
 
-	if cfg.CookieName == "" {
-		cfg.CookieName = defaultSessionKeyName
+	if config.CookieName == "" {
+		config.CookieName = defaultSessionKeyName
 	}
 
-	if cfg.GCLifetime == 0 {
-		cfg.GCLifetime = defaultGCLifetime
+	if config.GCLifetime == 0 {
+		config.GCLifetime = defaultGCLifetime
 	}
 
-	if cfg.SessionIDInURLQuery && cfg.SessionNameInURLQuery == "" {
-		cfg.SessionNameInURLQuery = defaultSessionKeyName
+	if config.SessionIDInURLQuery && config.SessionNameInURLQuery == "" {
+		config.SessionNameInURLQuery = defaultSessionKeyName
 	}
 
-	if cfg.SessionIDInHTTPHeader && cfg.SessionNameInHTTPHeader == "" {
-		cfg.SessionNameInHTTPHeader = defaultSessionKeyName
+	if config.SessionIDInHTTPHeader && config.SessionNameInHTTPHeader == "" {
+		config.SessionNameInHTTPHeader = defaultSessionKeyName
 	}
 
-	if cfg.SessionIDGeneratorFunc == nil {
-		cfg.SessionIDGeneratorFunc = cfg.defaultSessionIDGenerator
+	if config.SessionIDGeneratorFunc == nil {
+		config.SessionIDGeneratorFunc = config.defaultSessionIDGenerator
 	}
 
-	if cfg.IsSecureFunc == nil {
-		cfg.IsSecureFunc = cfg.defaultIsSecureFunc
+	if config.IsSecureFunc == nil {
+		config.IsSecureFunc = config.defaultIsSecureFunc
 	}
 
-	if cfg.EncodeFunc == nil {
-		cfg.EncodeFunc = Base64Encode
+	if config.EncodeFunc == nil {
+		config.EncodeFunc = Base64Encode
 	}
-	if cfg.DecodeFunc == nil {
-		cfg.DecodeFunc = Base64Decode
+	if config.DecodeFunc == nil {
+		config.DecodeFunc = Base64Decode
 	}
 
-	if cfg.Logger == nil {
-		cfg.Logger = defaultLogger
+	if config.Logger == nil {
+		config.Logger = defaultLogger
 	}
 
 	session := &Session{
-		config: cfg,
+		config: config,
 		cookie: newCookie(),
-		log:    cfg.Logger,
+		log:    config.Logger,
 		storePool: sync.Pool{
 			New: func() interface{} {
 				return NewStore()
@@ -85,8 +86,7 @@ func (s *Session) startGC(provider GarbageCollectedProvider) {
 	for {
 		select {
 		case <-ticker.C:
-			err := provider.GC()
-			if err != nil {
+			if err := provider.GC(); err != nil {
 				s.log.Printf("session GC crash: %v", err)
 			}
 		case <-s.stopGCChan:
@@ -169,7 +169,7 @@ func (s *Session) Get(ctx *fasthttp.RequestCtx) (*Store, error) {
 	store.defaultExpiration = s.config.Expiration
 
 	if !newUser {
-		data, err := s.provider.Get(ctx, id)
+		data, err := s.provider.Get(ctx, strconv.B2S(id))
 		if err != nil {
 			return nil, err
 		}
@@ -192,6 +192,7 @@ func (s *Session) Save(ctx *fasthttp.RequestCtx, store *Store) error {
 	}
 
 	id := store.GetSessionID()
+	lookup := store.GetLookup()
 	expiration := store.GetExpiration()
 
 	providerExpiration := expiration
@@ -204,7 +205,7 @@ func (s *Session) Save(ctx *fasthttp.RequestCtx, store *Store) error {
 		return err
 	}
 
-	if err := s.provider.Save(ctx, id, data, providerExpiration); err != nil {
+	if err := s.provider.Save(ctx, strconv.B2S(id), lookup, data, providerExpiration); err != nil {
 		return err
 	}
 
@@ -235,7 +236,7 @@ func (s *Session) Regenerate(ctx *fasthttp.RequestCtx) error {
 		providerExpiration = keepAliveExpiration
 	}
 
-	if err := s.provider.Regenerate(ctx, id, newID, providerExpiration); err != nil {
+	if err := s.provider.Regenerate(ctx, strconv.B2S(id), strconv.B2S(newID), providerExpiration); err != nil {
 		return err
 	}
 
@@ -250,12 +251,12 @@ func (s *Session) Destroy(ctx *fasthttp.RequestCtx) error {
 		return ErrNotSetProvider
 	}
 
-	sessionID := s.getSessionID(ctx)
-	if len(sessionID) == 0 {
+	id := s.getSessionID(ctx)
+	if len(id) == 0 {
 		return nil
 	}
 
-	err := s.provider.Destroy(ctx, sessionID)
+	err := s.provider.Destroy(ctx, strconv.B2S(id))
 	if err != nil {
 		return err
 	}

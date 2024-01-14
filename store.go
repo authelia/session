@@ -75,6 +75,20 @@ func (s *Store) GetSessionID() []byte {
 	return id
 }
 
+func (s *Store) GetLookup() string {
+	s.lock.RLock()
+	lookup := s.lookup
+	s.lock.RUnlock()
+
+	return lookup
+}
+
+func (s *Store) SetLookup(lookup string) {
+	s.lock.Lock()
+	s.lookup = lookup
+	s.lock.Unlock()
+}
+
 // SetSessionID sets the session id
 func (s *Store) SetSessionID(id []byte) {
 	s.lock.Lock()
